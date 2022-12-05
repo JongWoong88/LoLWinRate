@@ -5,19 +5,19 @@ def calWinRate(champList):
     import numpy as np
     import pandas as pd
     # 승률 예측 모델
-    with open("pickles/model.pickle", "rb") as fr:
+    with open("./pickles/model.pickle", "rb") as fr:
         model = pickle.load(fr)
 
     # 모델에 필요한 각 포지션별 챔피언에 대응되는 x값들
-    with open("pickles/label_top2.pickle", "rb") as fr:
+    with open("./pickles/label_top2.pickle", "rb") as fr:
         label_top = pickle.load(fr)
-    with open("pickles/label_jgl2.pickle", "rb") as fr:
+    with open("./pickles/label_jgl2.pickle", "rb") as fr:
         label_jgl = pickle.load(fr)
-    with open("pickles/label_mid2.pickle", "rb") as fr:
+    with open("./pickles/label_mid2.pickle", "rb") as fr:
         label_mid = pickle.load(fr)
-    with open("pickles/label_bot2.pickle", "rb") as fr:
+    with open("./pickles/label_bot2.pickle", "rb") as fr:
         label_bot = pickle.load(fr)
-    with open("pickles/label_sup2.pickle", "rb") as fr:
+    with open("./pickles/label_sup2.pickle", "rb") as fr:
         label_sup = pickle.load(fr)
 
     labels = [label_top, label_jgl, label_mid, label_bot, label_sup]  # for문 돌리기 위함
@@ -31,7 +31,7 @@ def recommendChamp(champList, position):
     # champList: 내가 골라야 할 포지션은 None, 나머지는 결정된 상태
     # position: top/jgl/mid/bot/sup
     import pickle
-    with open("pickles/" + position + "_major.pickle", "rb") as fr:  # 입력된 포지션에 따라 챔프리스트 다르게 불러옴
+    with open("./pickles/" + position + "_major.pickle", "rb") as fr:  # 입력된 포지션에 따라 챔프리스트 다르게 불러옴
         major = pickle.load(fr)
 
     dictp = {'top': 0, 'jgl': 1, 'mid': 2, 'bot': 3, 'sup': 4}
@@ -42,4 +42,41 @@ def recommendChamp(champList, position):
         resList.append((calWinRate(champList), champ))  # 계산 결과 리스트에 보관
 
     resList.sort(reverse=True)  # 승률로 정렬
+    return resList[0:3]  # 최대 승률인 챔프리턴
+
+def calWinRate_RNN(rnn_model, champList):
+    from keras.utils import to_categorical
+    import pickle
+
+    # 역인덱스
+    with open("pickles/champ_rIdx.pickle", "rb") as fr:
+        champ_rIdx = pickle.load(fr)
+
+    for j in range(10):
+        champList[j] = champ_rIdx[champList[j]]
+
+    one_hot_x = to_categorical(champList, num_classes=162)
+    one_hot_x = one_hot_x.reshape(1, 10, 162)
+
+    return float(rnn_model(one_hot_x))
+
+
+def recommendChamp_RNN(rnn_model, champList, position):
+    import tensorflow as tf
+    import numpy as np
+    import pickle
+
+    with open("pickles/" + position + "_major.pickle", "rb") as fr:  # 입력된 포지션에 따라 챔프리스트 다르게 불러옴
+        major = pickle.load(fr)
+
+    dictp = {'top': 0, 'jgl': 1, 'mid': 2, 'bot': 3, 'sup': 4}
+    resList = []  # 모든 챔프에 대해 기대승률 계산한 결과 담아둘 리스트
+
+    for champ in major:
+        champList[dictp[position]] = champ  # champList에서 추천받을 포지션에 챔피언 대입
+        temp = champList.copy()
+        resList.append((calWinRate_RNN(rnn_model, temp), champ))  # 계산 결과 리스트에 보관
+
+    resList.sort(reverse=True)  # 승률로 정렬
+
     return resList[0:3]  # 최대 승률인 챔프리턴

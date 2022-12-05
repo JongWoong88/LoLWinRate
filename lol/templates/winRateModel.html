@@ -12,7 +12,7 @@
         $("div#"+id+" img").attr("src",src+$("div#"+id+" select").val()+".png");
     }
 
-    function pred(){
+    function pred(model){
         var data = {};
         var champList = [];
         for(var i=1; i<=10; i++){
@@ -30,8 +30,10 @@
         }
 
         data.champList = champList;
+
+        var url = '/lol/predWinRate/' + model
         $.ajax({
-            url: '/lol/predWinRate',
+            url: url,
             method: "post",
             contentType: 'application/json; charset=utf-8',
             data: JSON.stringify(data),
@@ -249,8 +251,9 @@
                     </tr>
                 </tbody>
             </table>
-            <div class="col-md-2 col-md-offset-5">
-                <button type="button" class="btn btn-outline btn-primary btn-block" onclick="javascript:pred();">예측하기</button>
+            <div class="col-md-4 col-md-offset-4">
+                 <button type="button" class="btn btn-outline btn-primary btn-block" onclick="javascript:pred('XGB');" style="width: 49%; float: left;">예측-XGB</button>
+                <button type="button" class="btn btn-outline btn-primary btn-block" onclick="javascript:pred('RNN');" style="width: 49%; float: right; margin: 0">예측-RNN</button>
             </div>
           </div>
         </div>

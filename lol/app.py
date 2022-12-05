@@ -1,8 +1,12 @@
 from flask import Flask, jsonify, request, render_template
-from models import calWinRate, recommendChamp
+from models import calWinRate, recommendChamp, calWinRate_RNN, recommendChamp_RNN
 import numpy as np
 import pickle
 app = Flask(__name__,)
+
+# 모델 미리 로드
+from keras.models import load_model
+rnn_model = load_model('./models/bestmodel4.cp')
 
 @app.route('/lol/winRateModel')
 def winRateModel():
@@ -16,7 +20,7 @@ def recommendModel():
         champDict = pickle.load(fr)
     return render_template("recommendModel.html", champDict=champDict)
 
-@app.route('/lol/predWinRate', methods=['POST'])
+@app.route('/lol/predWinRate/XGB', methods=['POST'])
 def predWinRate():
     data = {}
     champList = request.json['champList']
@@ -25,7 +29,7 @@ def predWinRate():
     data['blueWinRate'] = (1000-winRate)/10
     return jsonify(data)
 
-@app.route('/lol/recommendPick', methods=['POST'])
+@app.route('/lol/recommendPick/XGB', methods=['POST'])
 def recommendPick():
     with open("champDict.pickle", "rb") as fr:
         champDict = pickle.load(fr)
@@ -34,6 +38,47 @@ def recommendPick():
     champList = request.json['champList']
     position = request.json['position']
     res = recommendChamp(champList=champList, position=position)
+    data['first'] = {"champion": res[0][1],
+                   "winRate": int(float(res[0][0])*1000)/10,
+                   "name": champDict[res[0][1]]}
+    data['second'] = {"champion": res[1][1],
+                   "winRate": int(float(res[1][0])*1000)/10,
+                   "name": champDict[res[1][1]]}
+    data['third'] = {"champion": res[2][1],
+                   "winRate": int(float(res[2][0])*1000)/10,
+                   "name": champDict[res[2][1]]}
+    return jsonify(data)
+
+# @app.route('/lol/winRateModel/RNN')
+# def winRateModel_RNN():
+#     with open("champDict.pickle", "rb") as fr:
+#         champDict = pickle.load(fr)
+#     return render_template("winRateModel_RNN.html", champDict=champDict)
+
+# @app.route('/lol/recommendModel/RNN')
+# def recommendModel_RNN():
+#     with open("champDict.pickle", "rb") as fr:
+#         champDict = pickle.load(fr)
+#     return render_template("recommendModel_RNN.html", champDict=champDict)
+
+@app.route('/lol/predWinRate/RNN', methods=['POST'])
+def predWinRate_RNN():
+    data = {}
+    champList = request.json['champList']
+    winRate = int(float(calWinRate_RNN(rnn_model, champList))*1000)
+    data['redWinRate'] = winRate/10
+    data['blueWinRate'] = (1000-winRate)/10
+    return jsonify(data)
+#
+@app.route('/lol/recommendPick/RNN', methods=['POST'])
+def recommendPick_RNN():
+    with open("champDict.pickle", "rb") as fr:
+        champDict = pickle.load(fr)
+
+    data = {}
+    champList = request.json['champList']
+    position = request.json['position']
+    res = recommendChamp_RNN(rnn_model, champList=champList, position=position)
     data['first'] = {"champion": res[0][1],
                    "winRate": int(float(res[0][0])*1000)/10,
                    "name": champDict[res[0][1]]}
